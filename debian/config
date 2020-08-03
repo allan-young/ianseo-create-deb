@@ -1,0 +1,124 @@
+#!/bin/sh
+
+# This file is part of ianseo-create-deb, which is distributed under
+# the terms of the General Public License (GPL), version 3. See
+# LICENSE.txt for details.
+#
+# Copyright (C) 2020 Allan Young
+
+# debconf configure file: Provides an opportunity to create the ianseo
+# default MySQL database, user and password.  The ianseo
+# implementation provides support to perform these operations but they
+# may fail depending on how the MySQL root user authentication is
+# setup.  We provide the option to perform this initial MySQL setup as
+# a convenience.
+
+# The shellcheck gets upset about functions, like db_go, that have
+# unused optional parameters, disable that warning:
+# shellcheck disable=SC2119
+
+. /usr/share/debconf/confmodule
+
+# RET is set to "true" if root can be used to directly issue MySQL
+# commands, otherwise set RET to "false".
+have_mysql_root_access()
+{
+    RET="false"
+
+    if mysql -e "SHOW DATABASES LIKE 'ianseo';" > /dev/null 2>&1
+    then
+	echo root true
+	RET="true"
+	return
+    fi
+    echo root false
+}
+
+# Set RET to "true" if the default ianseo DB exists, otherwise set RET
+# to "false".
+have_default_ianseo_db()
+{
+    RET="false"
+    # Check for default ianseo database.
+    DB_CHECK=$(mysql -e "SHOW DATABASES LIKE 'ianseo';")
+    RC=$?
+    if [ $RC -ne 0 ]; then
+	return
+    fi
+    if echo "$DB_CHECK" | grep -q ianseo
+    then
+	RET="true"
+	return
+    fi
+}
+
+# Set RET to "true" if the default ianseo DB user, otherwise set RET
+# to "false".
+have_default_ianseo_user()
+{
+    RET="false"
+    # Check for default ianseo user.
+    USER_CHECK=$(mysql -e "SELECT count(*) FROM mysql.user WHERE user = 'ianseo' AND host = 'localhost';")
+    RC=$?
+    if [ "$RC" -ne 0 ]; then
+	return
+    fi
+    if echo "$USER_CHECK" | grep -q 1
+    then
+	RET="true"
+	return
+    fi
+}
+
+# Only offer up the ability to create the ianseo default database and
+# user if we can perform MySQL operations.
+have_mysql_root_access
+if [ "$RET" = "false" ]; then
+    exit 0
+fi
+
+# We only handle the simple creation of the ianseo default database
+# and user, if any of these already exist then we'll leave things
+# as-is.
+have_default_ianseo_db
+if [ "$RET" = "true" ]; then
+    exit 0
+fi
+have_default_ianseo_user
+if [ "$RET" = "true" ]; then
+    exit 0
+fi
+
+# Okay, we should be set to ask the user if they want the default
+# ianseo MySQL database and user configuration performed now.  Set
+# db_input priority to "critical" since novice users will be
+# stalled/frustrated if their default MySQL root user authentication
+# prevents ianseo from creating its database and user.
+db_fset ianseo/default_mysql_init seen false
+db_input critical ianseo/default_mysql_init || true
+db_go
+
+# Check user's response.
+db_get ianseo/default_mysql_init
+if [ "$RET" = "false" ]; then
+    # User does not want us to perform the database operations.
+    exit 0
+fi
+
+# Create ianseo default MySQL DB.
+CREATE_DB_OUT=$(mysql -e "CREATE DATABASE ianseo;")
+RC=$?
+if [ "$RC" -ne 0 ]; then
+    echo "Database creation returned non-zero: $RC"
+    echo "Command output: $CREATE_DB_OUT"
+fi
+
+# Create ianseo default MySQL user with default password.
+CREATE_USER_OUT=$(mysql -e "CREATE USER 'ianseo'@'localhost'IDENTIFIED WITH mysql_native_password BY 'ianseo'; GRANT ALL PRIVILEGES ON ianseo.* TO 'ianseo'@'localhost'; FLUSH PRIVILEGES;")
+RC=$?
+if [ "$RC" -ne 0 ]; then
+    echo "Database user creation returned non-zero: $RC"
+    echo "Command output: $CREATE_USER_OUT"
+fi
+
+exit 0

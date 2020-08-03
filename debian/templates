@@ -1,0 +1,15 @@
+Template: ianseo/default_mysql_init
+Type: boolean
+Description: Create ianseo's default MySQL database, user and password?
+ The default MySQL root authentication setting on some Linux
+ distributions can result in ianseo failing to create its database,
+ user and password.  The following is optional but may simplify your
+ installation.
+ .
+ We can create the default ianseo database (ianseo) and user (ianseo)
+ with password (ianseo) right now, leaving the MySQL root account
+ configuration untouched.  The ianseo application will still present
+ you with a "Step 2: Database connection data" configuration page,
+ when there leave the defaults in place and click the "Create
+ user and database" button to proceed with the remaining database
+ configuration steps.

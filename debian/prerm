@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# This file is part of ianseo-create-deb, which is distributed under
+# the terms of the General Public License (GPL), version 3. See
+# LICENSE.txt for details.
+#
+# Copyright (C) 2020 Allan Young
+#
+
+# Disable our Apache ianseo configuration.
+a2disconf -q ianseo
+
+# Disable our PHP ini tweaks.
+phpdismod ianseo
+
+# Reload Apache to activate the changed configuration.
+systemctl reload apache2

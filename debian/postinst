@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# This file is part of ianseo-create-deb, which is distributed under
+# the terms of the General Public License (GPL), version 3. See
+# LICENSE.txt for details.
+#
+# Copyright (C) 2020 Allan Young
+#
+
+# The Linux install section from the ianseo How To guide provides
+# instructions to explicitly open up local file/directory write access
+# to _all_ users.  Given the Linux implementation is served up by
+# apache we'll simply restrict the file/directory ownership to the
+# www-data user/group and be less permissive.  Note that write
+# permission is needed since the ianseo implementation supports
+# software updates, that mechanism requires preexisting write
+# permissions.
+INSTALL_DIR=/var/www/html/ianseo
+chown -R www-data.www-data $INSTALL_DIR
+chmod -R u+wX $INSTALL_DIR
+
+# As per the ianseo How To guide's section for installing on Linux we
+# remove config.inc.php file, if present.
+if [ -f ${INSTALL_DIR}/Common/config.inc.php ]; then
+    rm ${INSTALL_DIR}/Common/config.inc.php
+fi
+
+# Enable our PHP ini tweaks.
+phpenmod ianseo
+
+# We need to enable our Apache ianseo configuration.
+a2enconf -q ianseo
+
+# Reload Apache to activate the new configuration.
+systemctl reload apache2

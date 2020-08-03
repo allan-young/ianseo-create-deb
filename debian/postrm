@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# This file is part of ianseo-create-deb, which is distributed under
+# the terms of the General Public License (GPL), version 3. See
+# LICENSE.txt for details.
+#
+# Copyright (C) 2020 Allan Young
+#
+
+INSTALL_DIR=/var/www/html/ianseo
+
+# New files and directories can be added to the installation directory
+# after the package installation.  These include DB dumps and content
+# from performing on-line ianseo updates.  The standard package
+# removal process will not delete these new/unknown files so we'll
+# explicitly remove our installation directory in our clean up.
+
+if [ -d ${INSTALL_DIR} ]; then
+    rm -rf ${INSTALL_DIR}
+fi
